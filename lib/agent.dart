@@ -1,4 +1,5 @@
-import 'package:agents/forgotpassword.dart';
+import 'package:agents/api.dart';
+import 'package:agents/forgotpassword.dart' hide kPrimaryColor;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -28,7 +29,7 @@ class MyApp extends StatelessWidget {
 
 // API Service Class
 class ApiService {
-  static const String baseUrl = 'http://localhost:2025/api';
+  static const String baseUrl = 'Apidartapi';
 
   // Method to get stored token
   static Future<String?> getToken() async {
@@ -300,10 +301,9 @@ class _ShareHolderFormScreenState extends State<ShareHolderForm> {
         city: _cityController.text,
         state: _stateController.text,
         address: _addressController.text,
-        password:
-            _passwordController.text.isNotEmpty
-                ? _passwordController.text
-                : ApiService.generateTemporaryPassword(),
+        password: _passwordController.text.isNotEmpty
+            ? _passwordController.text
+            : ApiService.generateTemporaryPassword(),
       );
 
       Navigator.of(context).pop(); // Close loading dialog
@@ -748,16 +748,16 @@ class _ShareHolderFormScreenState extends State<ShareHolderForm> {
           child: Container(
             padding: EdgeInsets.all(3),
             decoration: BoxDecoration(
-              color:
-                  isActive ? Colors.white.withOpacity(.5) : Colors.transparent,
+              color: isActive
+                  ? Colors.white.withOpacity(.5)
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(19),
             ),
             child: Container(
               decoration: BoxDecoration(
-                color:
-                    completed
-                        ? Colors.white
-                        : (isActive ? Colors.white : Colors.transparent),
+                color: completed
+                    ? Colors.white
+                    : (isActive ? Colors.white : Colors.transparent),
                 border: Border.all(
                   color: Colors.white.withOpacity(0.5),
                   width: 2,
@@ -765,20 +765,15 @@ class _ShareHolderFormScreenState extends State<ShareHolderForm> {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Center(
-                child:
-                    completed
-                        ? Icon(
-                          PhosphorIcons.check,
-                          color: kPrimaryColor,
-                          size: 18,
-                        )
-                        : Text(
-                          step.toString(),
-                          style: TextStyle(
-                            color: isActive ? kPrimaryColor : Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
+                child: completed
+                    ? Icon(PhosphorIcons.check, color: kPrimaryColor, size: 18)
+                    : Text(
+                        step.toString(),
+                        style: TextStyle(
+                          color: isActive ? kPrimaryColor : Colors.white,
+                          fontWeight: FontWeight.bold,
                         ),
+                      ),
               ),
             ),
           ),
@@ -800,8 +795,9 @@ class _ShareHolderFormScreenState extends State<ShareHolderForm> {
               Text(
                 title,
                 style: TextStyle(
-                  color:
-                      (isActive == completed) ? Colors.white70 : Colors.white,
+                  color: (isActive == completed)
+                      ? Colors.white70
+                      : Colors.white,
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),
@@ -1299,33 +1295,32 @@ class _ShareHolderFormScreenState extends State<ShareHolderForm> {
           cursorColor: kPrimaryColor,
           maxLines: maxLines,
           inputFormatters: inputFormatters,
-          validator:
-              isRequired
-                  ? (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'This field is required';
-                    }
-                    if (label == 'Email Address' && !value.contains('@')) {
-                      return 'Please enter a valid email address';
-                    }
-                    if (label == 'Aadhaar Card Number' && value.length != 12) {
-                      return 'Aadhaar number should be 12 digits';
-                    }
-                    if (label == 'Pan Card Number' &&
-                        value.length != 10 &&
-                        !RegExp(r'^[A-Z]{5}[0-9]{4}[A-Z]{1}').hasMatch(value)) {
-                      return 'Enter valid PAN (e.g. ABCDE1234F)';
-                    }
-                    if (label == 'IFSC Code' &&
-                        !RegExp(r'^[A-Z]{4}0[A-Z0-9]{6}').hasMatch(value)) {
-                      return 'Enter valid IFSC (e.g. SBIN0000123)';
-                    }
-                    if (label == 'Phone Number' && value.length != 10) {
-                      return 'Phone number should be 10 digits';
-                    }
-                    return null;
+          validator: isRequired
+              ? (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'This field is required';
                   }
-                  : null,
+                  if (label == 'Email Address' && !value.contains('@')) {
+                    return 'Please enter a valid email address';
+                  }
+                  if (label == 'Aadhaar Card Number' && value.length != 12) {
+                    return 'Aadhaar number should be 12 digits';
+                  }
+                  if (label == 'Pan Card Number' &&
+                      value.length != 10 &&
+                      !RegExp(r'^[A-Z]{5}[0-9]{4}[A-Z]{1}').hasMatch(value)) {
+                    return 'Enter valid PAN (e.g. ABCDE1234F)';
+                  }
+                  if (label == 'IFSC Code' &&
+                      !RegExp(r'^[A-Z]{4}0[A-Z0-9]{6}').hasMatch(value)) {
+                    return 'Enter valid IFSC (e.g. SBIN0000123)';
+                  }
+                  if (label == 'Phone Number' && value.length != 10) {
+                    return 'Phone number should be 10 digits';
+                  }
+                  return null;
+                }
+              : null,
           decoration: InputDecoration(
             filled: true,
             fillColor: const Color(0xFFF7FAFC),
@@ -1387,23 +1382,22 @@ class _ShareHolderFormScreenState extends State<ShareHolderForm> {
           controller: controller,
           obscureText: !_isPasswordVisible,
           cursorColor: kPrimaryColor,
-          validator:
-              isRequired
-                  ? (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'This field is required';
-                    }
-                    if (value.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
-                    return null;
+          validator: isRequired
+              ? (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'This field is required';
                   }
-                  : (value) {
-                    if (value != null && value.isNotEmpty && value.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
-                    return null;
-                  },
+                  if (value.length < 6) {
+                    return 'Password must be at least 6 characters';
+                  }
+                  return null;
+                }
+              : (value) {
+                  if (value != null && value.isNotEmpty && value.length < 6) {
+                    return 'Password must be at least 6 characters';
+                  }
+                  return null;
+                },
           decoration: InputDecoration(
             filled: true,
             fillColor: const Color(0xFFF7FAFC),
@@ -1462,15 +1456,14 @@ class _ShareHolderFormScreenState extends State<ShareHolderForm> {
         TextFormField(
           controller: controller,
           readOnly: true,
-          validator:
-              isRequired
-                  ? (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'This field is required';
-                    }
-                    return null;
+          validator: isRequired
+              ? (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'This field is required';
                   }
-                  : null,
+                  return null;
+                }
+              : null,
           onTap: () async {
             final DateTime? picked = await showDatePicker(
               context: context,
@@ -1552,10 +1545,9 @@ class _ShareHolderFormScreenState extends State<ShareHolderForm> {
           const SizedBox(width: 16),
         ],
         ElevatedButton(
-          onPressed:
-              _isSubmitting
-                  ? null
-                  : (currentStep == 4 ? _submitForm : _nextStep),
+          onPressed: _isSubmitting
+              ? null
+              : (currentStep == 4 ? _submitForm : _nextStep),
           style: ElevatedButton.styleFrom(
             backgroundColor: kPrimaryColor,
             shape: RoundedRectangleBorder(
@@ -1563,38 +1555,37 @@ class _ShareHolderFormScreenState extends State<ShareHolderForm> {
             ),
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
           ),
-          child:
-              _isSubmitting
-                  ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
+          child: _isSubmitting
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
                       ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Submitting...',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
-                  )
-                  : Text(
-                    currentStep == 4 ? 'Submit' : 'Next',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
                     ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Submitting...',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                )
+              : Text(
+                  currentStep == 4 ? 'Submit' : 'Next',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
                   ),
+                ),
         ),
       ],
     );
@@ -1638,6 +1629,6 @@ class UpperCaseTextInputFormatter extends TextInputFormatter {
     return TextEditingValue(
       text: newValue.text.toUpperCase(),
       selection: newValue.selection,
-);
-}
+    );
+  }
 }

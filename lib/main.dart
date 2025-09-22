@@ -1,3 +1,4 @@
+import 'package:agents/api.dart';
 import 'package:agents/home.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -233,191 +234,194 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   // ✅ Fixed Login Method with proper null safety
-Future<void> _login() async {
-  if (!_formKey.currentState!.validate()) return;
-  
-  setState(() {
-    _isLoading = true;
-  });
+  Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  try {
-    final response = await http.post(
-      Uri.parse('http://localhost:2025/api/auth/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'phone': _phoneController.text.trim(),
-        'password': _passwordController.text,
-      }),
-    );
+    setState(() {
+      _isLoading = true;
+    });
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      
-      // ✅ Validate response data structure
-      if (data == null || data['user'] == null) {
-        _showErrorSnackBar('Invalid response from server. Please try again.');
-        return;
-      }
-
-      // ✅ Store user data safely
-      await _storeUserData(data);
-      
-      // ✅ Get userId with null safety
-      final userId = data['user']?['id']?.toString();
-      
-      
-      if (userId == null || userId.isEmpty) {
-        _showErrorSnackBar('Failed to get user information. Please try again.');
-        return;
-      }
-
-      print('Login successful for userId: $userId');
-      
-      // ✅ Navigate to WalletPage
-      Navigator.pushReplacement(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              WalletPage(userId: userId),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return SlideTransition(
-              position: Tween<Offset>(
-                begin: Offset(1.0, 0.0),
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
-            );
-          },
-        ),
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConfig.api}/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'phone': _phoneController.text.trim(),
+          'password': _passwordController.text,
+        }),
       );
-    } else {
-      // ✅ Handle different error status codes
-      String errorMessage = 'Login failed. Please check your credentials.';
-      
-      try {
-        final errorData = jsonDecode(response.body);
-        errorMessage = errorData['message'] ?? errorMessage;
-      } catch (e) {
-        // Use default error message if JSON parsing fails
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        // ✅ Validate response data structure
+        if (data == null || data['user'] == null) {
+          _showErrorSnackBar('Invalid response from server. Please try again.');
+          return;
+        }
+
+        // ✅ Store user data safely
+        await _storeUserData(data);
+
+        // ✅ Get userId with null safety
+        final userId = data['user']?['id']?.toString();
+
+        if (userId == null || userId.isEmpty) {
+          _showErrorSnackBar(
+            'Failed to get user information. Please try again.',
+          );
+          return;
+        }
+
+        print('Login successful for userId: $userId');
+
+        // ✅ Navigate to WalletPage
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                WalletPage(userId: userId),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+                  return SlideTransition(
+                    position: Tween<Offset>(
+                      begin: Offset(1.0, 0.0),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
+                  );
+                },
+          ),
+        );
+      } else {
+        // ✅ Handle different error status codes
+        String errorMessage = 'Login failed. Please check your credentials.';
+
+        try {
+          final errorData = jsonDecode(response.body);
+          errorMessage = errorData['message'] ?? errorMessage;
+        } catch (e) {
+          // Use default error message if JSON parsing fails
+        }
+
+        _showErrorSnackBar(errorMessage);
       }
-      
-      _showErrorSnackBar(errorMessage);
-    }
-  } catch (e) {
-    print('Login error: $e');
-    _showErrorSnackBar('Network error. Please check your connection and try again.');
-  } finally {
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
+    } catch (e) {
+      print('Login error: $e');
+      _showErrorSnackBar(
+        'Network error. Please check your connection and try again.',
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
-}
 
-// ✅ Improved _storeUserData method with better null safety
-Future<void> _storeUserData(Map<String, dynamic> data) async {
-  try {
-    final prefs = await SharedPreferences.getInstance();
+  // ✅ Improved _storeUserData method with better null safety
+  Future<void> _storeUserData(Map<String, dynamic> data) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
 
-    // ✅ Safe token storage
-    final token = data['token']?.toString() ?? '';
-    await prefs.setString('auth_token', token);
+      // ✅ Safe token storage
+      final token = data['token']?.toString() ?? '';
+      await prefs.setString('auth_token', token);
 
-    // ✅ Safe user data storage
-    final userData = data['user'];
-    if (userData != null) {
-      await prefs.setString('user_data', jsonEncode(userData));
+      // ✅ Safe user data storage
+      final userData = data['user'];
+      if (userData != null) {
+        await prefs.setString('user_data', jsonEncode(userData));
 
-      // ✅ Safe user_id storage
-      final userId = userData['id']?.toString();
-      if (userId != null && userId.isNotEmpty) {
-        await prefs.setString('user_id', userId);
-        print('✅ Stored user_id: $userId');
+        // ✅ Safe user_id storage
+        final userId = userData['id']?.toString();
+        if (userId != null && userId.isNotEmpty) {
+          await prefs.setString('user_id', userId);
+          print('✅ Stored user_id: $userId');
+        } else {
+          print('⚠️ Warning: user_id is null or empty in API response');
+        }
+
+        // ✅ Safe role storage
+        final role = userData['role']?.toString();
+        if (role != null && role.isNotEmpty) {
+          await prefs.setString('user_role', role);
+          print('✅ Stored user_role: $role');
+        } else {
+          print('⚠️ Warning: role is null or empty in API response');
+        }
       } else {
-        print('⚠️ Warning: user_id is null or empty in API response');
+        print('⚠️ Warning: user data is null in API response');
       }
 
-      // ✅ Safe role storage
-      final role = userData['role']?.toString();
-      if (role != null && role.isNotEmpty) {
-        await prefs.setString('user_role', role);
-        print('✅ Stored user_role: $role');
-      } else {
-        print('⚠️ Warning: role is null or empty in API response');
-      }
-    } else {
-      print('⚠️ Warning: user data is null in API response');
+      // ✅ Store login time
+      await prefs.setString('login_time', DateTime.now().toIso8601String());
+
+      print('✅ User data stored successfully');
+    } catch (e) {
+      print('❌ Error storing user data: $e');
+      throw Exception('Failed to store user data');
     }
-
-    // ✅ Store login time
-    await prefs.setString('login_time', DateTime.now().toIso8601String());
-
-    print('✅ User data stored successfully');
-  } catch (e) {
-    print('❌ Error storing user data: $e');
-    throw Exception('Failed to store user data');
   }
-}
 
-// ✅ Helper method to retrieve stored userId safely
-Future<String?> _getStoredUserId() async {
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString('user_id');
+  // ✅ Helper method to retrieve stored userId safely
+  Future<String?> _getStoredUserId() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('user_id');
 
-    if (userId == null || userId.isEmpty) {
-      print('⚠️ No stored user_id found');
+      if (userId == null || userId.isEmpty) {
+        print('⚠️ No stored user_id found');
+        return null;
+      }
+
+      print('✅ Retrieved stored user_id: $userId');
+      return userId;
+    } catch (e) {
+      print('❌ Error retrieving stored user_id: $e');
       return null;
     }
-
-    print('✅ Retrieved stored user_id: $userId');
-    return userId;
-  } catch (e) {
-    print('❌ Error retrieving stored user_id: $e');
-    return null;
   }
-}
 
-// ✅ Helper method to retrieve stored role safely
-Future<String?> _getStoredUserRole() async {
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    final role = prefs.getString('user_role');
+  // ✅ Helper method to retrieve stored role safely
+  Future<String?> _getStoredUserRole() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final role = prefs.getString('user_role');
 
-    if (role == null || role.isEmpty) {
-      print('⚠️ No stored user_role found');
+      if (role == null || role.isEmpty) {
+        print('⚠️ No stored user_role found');
+        return null;
+      }
+
+      print('✅ Retrieved stored user_role: $role');
+      return role;
+    } catch (e) {
+      print('❌ Error retrieving stored user_role: $e');
       return null;
     }
-
-    print('✅ Retrieved stored user_role: $role');
-    return role;
-  } catch (e) {
-    print('❌ Error retrieving stored user_role: $e');
-    return null;
   }
-}
 
-// ✅ Method to check if user is logged in
-Future<bool> _isLoggedIn() async {
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
-    final userId = prefs.getString('user_id');
-    final role = prefs.getString('user_role');
+  // ✅ Method to check if user is logged in
+  Future<bool> _isLoggedIn() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      final userId = prefs.getString('user_id');
+      final role = prefs.getString('user_role');
 
-    return token != null &&
-        token.isNotEmpty &&
-        userId != null &&
-        userId.isNotEmpty &&
-        role != null &&
-        role.isNotEmpty;
-  } catch (e) {
-    print('❌ Error checking login status: $e');
-    return false;
+      return token != null &&
+          token.isNotEmpty &&
+          userId != null &&
+          userId.isNotEmpty &&
+          role != null &&
+          role.isNotEmpty;
+    } catch (e) {
+      print('❌ Error checking login status: $e');
+      return false;
+    }
   }
-}
-
 
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(

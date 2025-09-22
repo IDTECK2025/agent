@@ -1,3 +1,4 @@
+import 'package:agents/api.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -30,7 +31,6 @@ class MyApp extends StatelessWidget {
 // API Service Class
 // API Service Class - Updated for Customer Creation
 class ApiService {
-  static const String baseUrl = 'http://localhost:2025/api';
 
   // Method to get stored token
   static Future<String?> getToken() async {
@@ -56,7 +56,7 @@ class ApiService {
     required String password,
   }) async {
     try {
-      final url = Uri.parse('$baseUrl/auth/login');
+      final url = Uri.parse('${ApiConfig.api}/auth/login');
 
       final response = await http.post(
         url,
@@ -105,13 +105,8 @@ class ApiService {
     required String lastName,
     required String email,
     required String phone,
-    required String aadhaar,
-    required String pan,
-    required String holderName,
-    required String bankAccount,
-    required String ifsc,
-    required String branchName,
-    required String branchCode,
+    required String nominee,
+    required String nomineeNumber,
     required String city,
     required String state,
     required String address,
@@ -130,22 +125,18 @@ class ApiService {
       }
 
       // Updated endpoint for customer creation
-      final url = Uri.parse('$baseUrl/customers');
+      final url = Uri.parse('${ApiConfig.api}/customers');
 
       final Map<String, dynamic> requestBody = {
         'name': '$firstName $lastName',
         'email': email,
         'phone': phone,
-        'adharcard': aadhaar, // Fixed spelling to match backend
-        'pancard': pan,
+        'nominee': nominee,
+        'nomineeNumber': nomineeNumber,
         'address': address,
-        'Bank': holderName,
-        'IFSC': ifsc,
-        'acc': bankAccount,
-        'branch': branchName,
         'city': city,
         'state': state,
-        'addrass': address,
+        'addrass': address, // Keep if backend expects this field
       };
 
       // Add amount and date for group assignment (now required)
@@ -226,17 +217,10 @@ class _CustomerFormScreenState extends State<CustomerForm> {
   final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _aadhaarController = TextEditingController();
-  final _panController = TextEditingController();
+  final _nomineeController = TextEditingController();
+  final _nomineeNumberController = TextEditingController();
 
-  // Step 2 - Bank Details Controllers
-  final _holderNameController = TextEditingController();
-  final _bankAccountController = TextEditingController();
-  final _ifscController = TextEditingController();
-  final _branchNameController = TextEditingController();
-  final _branchCodeController = TextEditingController();
-
-  // Step 3 - Address Details Controllers
+  // Step 2 - Address Details Controllers (formerly Step 3)
   final _cityController = TextEditingController();
   final _stateController = TextEditingController();
   final _addressController = TextEditingController();
@@ -251,7 +235,7 @@ class _CustomerFormScreenState extends State<CustomerForm> {
   void _nextStep() {
     if (_formKey.currentState!.validate()) {
       setState(() {
-        if (currentStep < 4) {
+        if (currentStep < 3) { // Now only 3 steps instead of 4
           currentStep++;
         }
       });
@@ -307,17 +291,11 @@ class _CustomerFormScreenState extends State<CustomerForm> {
         lastName: _lastNameController.text,
         email: _emailController.text,
         phone: _phoneController.text,
-        aadhaar: _aadhaarController.text,
-        pan: _panController.text,
-        holderName: _holderNameController.text,
-        bankAccount: _bankAccountController.text,
-        ifsc: _ifscController.text,
-        branchName: _branchNameController.text,
-        branchCode: _branchCodeController.text,
+        nominee: _nomineeController.text,
+        nomineeNumber: _nomineeNumberController.text,
         city: _cityController.text,
         state: _stateController.text,
         address: _addressController.text,
-        // Optional: Add amount and date if you have those fields
         amount: double.parse(_amountController.text),
         date: formatDate(_dateController.text),
       );
@@ -355,7 +333,7 @@ class _CustomerFormScreenState extends State<CustomerForm> {
         return AlertDialog(
           title: const Text('Authentication Required'),
           content: const Text(
-            'You need to login before creating a shareholder account.',
+            'You need to login before creating a customer account.',
           ),
           actions: [
             TextButton(
@@ -515,13 +493,8 @@ class _CustomerFormScreenState extends State<CustomerForm> {
     _lastNameController.clear();
     _emailController.clear();
     _phoneController.clear();
-    _aadhaarController.clear();
-    _panController.clear();
-    _holderNameController.clear();
-    _bankAccountController.clear();
-    _ifscController.clear();
-    _branchNameController.clear();
-    _branchCodeController.clear();
+    _nomineeController.clear();
+    _nomineeNumberController.clear();
     _cityController.clear();
     _stateController.clear();
     _addressController.clear();
@@ -529,7 +502,7 @@ class _CustomerFormScreenState extends State<CustomerForm> {
     _dateController.clear();
   }
 
-  Widget _buildStep4Confirmation(bool isMobile) {
+  Widget _buildStep3Confirmation(bool isMobile) {
     return Container(
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey[300]!),
@@ -547,25 +520,8 @@ class _CustomerFormScreenState extends State<CustomerForm> {
             ),
             _buildConfirmationRow('Email Address', _emailController.text),
             _buildConfirmationRow('Phone Number', _phoneController.text),
-            _buildConfirmationRow(
-              'Aadhaar Card Number',
-              _aadhaarController.text,
-            ),
-            _buildConfirmationRow('Pan Card Number', _panController.text),
-          ]),
-          const SizedBox(height: 24),
-          _buildConfirmationSection('Bank Details', [
-            _buildConfirmationRow(
-              'Account Holder Name',
-              _holderNameController.text,
-            ),
-            _buildConfirmationRow(
-              'Bank Account Number',
-              _bankAccountController.text,
-            ),
-            _buildConfirmationRow('IFSC Code', _ifscController.text),
-            _buildConfirmationRow('Branch Name', _branchNameController.text),
-            _buildConfirmationRow('Branch Code', _branchCodeController.text),
+            _buildConfirmationRow('Nominee Name', _nomineeController.text),
+            _buildConfirmationRow('Nominee Number', _nomineeNumberController.text),
           ]),
           const SizedBox(height: 24),
           _buildConfirmationSection('Address Details', [
@@ -723,19 +679,12 @@ class _CustomerFormScreenState extends State<CustomerForm> {
           _buildConnector(currentStep > 1),
           _buildStepItem(
             2,
-            'Bank Details',
+            'Address Details',
             currentStep > 2,
             isActive: currentStep == 2,
           ),
           _buildConnector(currentStep > 2),
-          _buildStepItem(
-            3,
-            'Address Details',
-            currentStep > 3,
-            isActive: currentStep == 3,
-          ),
-          _buildConnector(currentStep > 3),
-          _buildStepItem(4, 'Confirmation', false, isActive: currentStep == 4),
+          _buildStepItem(3, 'Confirmation', false, isActive: currentStep == 3),
           const Spacer(),
           Center(
             child: Image.asset(
@@ -769,16 +718,16 @@ class _CustomerFormScreenState extends State<CustomerForm> {
           child: Container(
             padding: EdgeInsets.all(3),
             decoration: BoxDecoration(
-              color:
-                  isActive ? Colors.white.withOpacity(.5) : Colors.transparent,
+              color: isActive
+                  ? Colors.white.withOpacity(.5)
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(19),
             ),
             child: Container(
               decoration: BoxDecoration(
-                color:
-                    completed
-                        ? Colors.white
-                        : (isActive ? Colors.white : Colors.transparent),
+                color: completed
+                    ? Colors.white
+                    : (isActive ? Colors.white : Colors.transparent),
                 border: Border.all(
                   color: Colors.white.withOpacity(0.5),
                   width: 2,
@@ -786,20 +735,15 @@ class _CustomerFormScreenState extends State<CustomerForm> {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Center(
-                child:
-                    completed
-                        ? Icon(
-                          PhosphorIcons.check,
-                          color: kPrimaryColor,
-                          size: 18,
-                        )
-                        : Text(
-                          step.toString(),
-                          style: TextStyle(
-                            color: isActive ? kPrimaryColor : Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
+                child: completed
+                    ? Icon(PhosphorIcons.check, color: kPrimaryColor, size: 18)
+                    : Text(
+                        step.toString(),
+                        style: TextStyle(
+                          color: isActive ? kPrimaryColor : Colors.white,
+                          fontWeight: FontWeight.bold,
                         ),
+                      ),
               ),
             ),
           ),
@@ -821,8 +765,9 @@ class _CustomerFormScreenState extends State<CustomerForm> {
               Text(
                 title,
                 style: TextStyle(
-                  color:
-                      (isActive == completed) ? Colors.white70 : Colors.white,
+                  color: (isActive == completed)
+                      ? Colors.white70
+                      : Colors.white,
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),
@@ -878,10 +823,8 @@ class _CustomerFormScreenState extends State<CustomerForm> {
       case 1:
         return 'Customer Personal Details';
       case 2:
-        return 'Add bank details';
-      case 3:
         return 'Add address details';
-      case 4:
+      case 3:
         return 'Confirm customer information';
       default:
         return 'Complete customer profile';
@@ -893,10 +836,8 @@ class _CustomerFormScreenState extends State<CustomerForm> {
       case 1:
         return 'Enter customer personal information for account setup';
       case 2:
-        return 'Please provide customer bank account details';
-      case 3:
         return 'Please provide customer address and location information';
-      case 4:
+      case 3:
         return 'Please review customer information and confirm to create account';
       default:
         return 'Please complete all required customer information';
@@ -928,7 +869,7 @@ class _CustomerFormScreenState extends State<CustomerForm> {
             ),
           const SizedBox(width: 8),
           Text(
-            'STEP $currentStep OF 4',
+            'STEP $currentStep OF 3', // Updated to 3 steps
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
@@ -953,9 +894,8 @@ class _CustomerFormScreenState extends State<CustomerForm> {
                 key: ValueKey(currentStep),
                 children: [
                   if (currentStep == 1) _buildStep1Fields(isMobile),
-                  if (currentStep == 2) _buildStep2Fields(isMobile),
-                  if (currentStep == 3) _buildStep3Fields(isMobile),
-                  if (currentStep == 4) _buildStep4Confirmation(isMobile),
+                  if (currentStep == 2) _buildStep2Fields(isMobile), // Address details moved to step 2
+                  if (currentStep == 3) _buildStep3Confirmation(isMobile), // Confirmation moved to step 3
                 ],
               ),
             ),
@@ -990,19 +930,13 @@ class _CustomerFormScreenState extends State<CustomerForm> {
             isRequired: true,
           ),
           const SizedBox(height: 16),
-          _buildTextField(
-            'Aadhaar Card Number',
-            _aadhaarController,
-            keyboardType: TextInputType.number,
-            isRequired: true,
-          ),
+          _buildTextField('Nominee Name', _nomineeController, isRequired: true),
           const SizedBox(height: 16),
           _buildTextField(
-            'Pan Card Number',
-            _panController,
-            keyboardType: TextInputType.visiblePassword,
+            'Nominee Number',
+            _nomineeNumberController,
+            keyboardType: TextInputType.phone,
             isRequired: true,
-            isUpperCase: true,
           ),
         ],
       );
@@ -1055,20 +989,18 @@ class _CustomerFormScreenState extends State<CustomerForm> {
             children: [
               Expanded(
                 child: _buildTextField(
-                  'Aadhaar Card Number',
-                  _aadhaarController,
-                  keyboardType: TextInputType.number,
+                  'Nominee Name',
+                  _nomineeController,
                   isRequired: true,
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: _buildTextField(
-                  'Pan Card Number',
-                  _panController,
-                  keyboardType: TextInputType.visiblePassword,
+                  'Nominee Number',
+                  _nomineeNumberController,
+                  keyboardType: TextInputType.phone,
                   isRequired: true,
-                  isUpperCase: true,
                 ),
               ),
             ],
@@ -1084,119 +1016,26 @@ class _CustomerFormScreenState extends State<CustomerForm> {
       return Column(
         children: [
           _buildTextField(
-            'Account Holder Name',
-            _holderNameController,
+            'City',
+            _cityController,
             keyboardType: TextInputType.text,
             isRequired: true,
-            isUpperCase: true,
           ),
           const SizedBox(height: 16),
           _buildTextField(
-            'Bank Account Number',
-            _bankAccountController,
-            keyboardType: TextInputType.number,
-            isRequired: true,
-          ),
-          const SizedBox(height: 16),
-          _buildTextField(
-            'IFSC Code',
-            _ifscController,
-            isRequired: true,
-            isUpperCase: true,
-          ),
-          const SizedBox(height: 16),
-          _buildTextField(
-            'Branch Name',
-            _branchNameController,
+            'State',
+            _stateController,
             keyboardType: TextInputType.text,
             isRequired: true,
-            isUpperCase: true,
           ),
           const SizedBox(height: 16),
           _buildTextField(
-            'Branch Code',
-            _branchCodeController,
-            keyboardType: TextInputType.visiblePassword,
+            'Address',
+            _addressController,
+            keyboardType: TextInputType.multiline,
             isRequired: true,
-            isUpperCase: true,
+            maxLines: 3,
           ),
-        ],
-      );
-    } else {
-      return Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: _buildTextField(
-                  'Account Holder Name',
-                  _holderNameController,
-                  keyboardType: TextInputType.text,
-                  isRequired: true,
-                  isUpperCase: true,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildTextField(
-                  'Bank Account Number',
-                  _bankAccountController,
-                  keyboardType: TextInputType.number,
-                  isRequired: true,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildTextField(
-            'IFSC Code',
-            _ifscController,
-            isRequired: true,
-            isUpperCase: true,
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildTextField(
-                  'Branch Name',
-                  _branchNameController,
-                  keyboardType: TextInputType.text,
-                  isRequired: true,
-                  isUpperCase: true,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildTextField(
-                  'Branch Code',
-                  _branchCodeController,
-                  keyboardType: TextInputType.visiblePassword,
-                  isRequired: true,
-                  isUpperCase: true,
-                ),
-              ),
-            ],
-          ),
-        ],
-      );
-    }
-  }
-
-  Widget _buildStep3Fields(bool isMobile) {
-    if (isMobile) {
-      return Column(
-        children: [
-          _buildTextField('City', _cityController,
-              keyboardType: TextInputType.text, isRequired: true),
-          const SizedBox(height: 16),
-          _buildTextField('State', _stateController,
-              keyboardType: TextInputType.text, isRequired: true),
-          const SizedBox(height: 16),
-          _buildTextField('Address', _addressController,
-              keyboardType: TextInputType.multiline,
-              isRequired: true,
-              maxLines: 3),
           const SizedBox(height: 24),
           // Divider
           Container(
@@ -1231,21 +1070,32 @@ class _CustomerFormScreenState extends State<CustomerForm> {
           Row(
             children: [
               Expanded(
-                child: _buildTextField('City', _cityController,
-                    keyboardType: TextInputType.text, isRequired: true),
+                child: _buildTextField(
+                  'City',
+                  _cityController,
+                  keyboardType: TextInputType.text,
+                  isRequired: true,
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: _buildTextField('State', _stateController,
-                    keyboardType: TextInputType.text, isRequired: true),
+                child: _buildTextField(
+                  'State',
+                  _stateController,
+                  keyboardType: TextInputType.text,
+                  isRequired: true,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          _buildTextField('Address', _addressController,
-              keyboardType: TextInputType.multiline,
-              isRequired: true,
-              maxLines: 3),
+          _buildTextField(
+            'Address',
+            _addressController,
+            keyboardType: TextInputType.multiline,
+            isRequired: true,
+            maxLines: 3,
+          ),
           const SizedBox(height: 24),
           // Divider
           Container(
@@ -1281,7 +1131,6 @@ class _CustomerFormScreenState extends State<CustomerForm> {
     }
   }
 
-
   Widget _buildTextField(
     String label,
     TextEditingController controller, {
@@ -1298,15 +1147,7 @@ class _CustomerFormScreenState extends State<CustomerForm> {
       inputFormatters.add(UpperCaseTextInputFormatter());
     }
 
-    if (label == 'Aadhaar Card Number') {
-      inputFormatters.add(FilteringTextInputFormatter.digitsOnly);
-      inputFormatters.add(LengthLimitingTextInputFormatter(12));
-    } else if (label == 'Pan Card Number') {
-      inputFormatters.add(
-        FilteringTextInputFormatter.allow(RegExp(r'[A-Z0-9]')),
-      );
-      inputFormatters.add(LengthLimitingTextInputFormatter(10));
-    } else if (label == 'Phone Number') {
+    if (label == 'Phone Number' || label == 'Nominee Number') {
       inputFormatters.add(FilteringTextInputFormatter.digitsOnly);
       inputFormatters.add(LengthLimitingTextInputFormatter(10));
     } else if (label == 'Amount') {
@@ -1333,39 +1174,26 @@ class _CustomerFormScreenState extends State<CustomerForm> {
           cursorColor: kPrimaryColor,
           maxLines: maxLines,
           inputFormatters: inputFormatters,
-          validator:
-              isRequired
-                  ? (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'This field is required';
-                    }
-                    if (label == 'Email Address' && !value.contains('@')) {
-                      return 'Please enter a valid email address';
-                    }
-                    if (label == 'Aadhaar Card Number' && value.length != 12) {
-                      return 'Aadhaar number should be 12 digits';
-                    }
-                    if (label == 'Pan Card Number' &&
-                        value.length != 10 &&
-                        !RegExp(r'^[A-Z]{5}[0-9]{4}[A-Z]{1}').hasMatch(value)) {
-                      return 'Enter valid PAN (e.g. ABCDE1234F)';
-                    }
-                    if (label == 'IFSC Code' &&
-                        !RegExp(r'^[A-Z]{4}0[A-Z0-9]{6}').hasMatch(value)) {
-                      return 'Enter valid IFSC (e.g. SBIN0000123)';
-                    }
-                    if (label == 'Phone Number' && value.length != 10) {
-                      return 'Phone number should be 10 digits';
-                    }
-                    if (label == 'Amount') {
-                      final amount = double.tryParse(value);
-                      if (amount == null || amount <= 0) {
-                        return 'Please enter a valid amount';
-                      }
-                    }
-                    return null;
+          validator: isRequired
+              ? (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'This field is required';
                   }
-                  : null,
+                  if (label == 'Email Address' && !value.contains('@')) {
+                    return 'Please enter a valid email address';
+                  }
+                  if ((label == 'Phone Number' || label == 'Nominee Number') && value.length != 10) {
+                    return 'Phone number should be 10 digits';
+                  }
+                  if (label == 'Amount') {
+                    final amount = double.tryParse(value);
+                    if (amount == null || amount <= 0) {
+                      return 'Please enter a valid amount';
+                    }
+                  }
+                  return null;
+                }
+              : null,
           decoration: InputDecoration(
             filled: true,
             fillColor: const Color(0xFFF7FAFC),
@@ -1444,9 +1272,7 @@ class _CustomerFormScreenState extends State<CustomerForm> {
               ? (v) => v == null ? "This field is required" : null
               : null,
           dropdownStyleData: DropdownStyleData(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-            ),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
           ),
           menuItemStyleData: const MenuItemStyleData(
             padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1465,10 +1291,7 @@ class _CustomerFormScreenState extends State<CustomerForm> {
           ? int.tryParse(_amountController.text)
           : null,
       items: amounts
-          .map((v) => DropdownMenuItem<int>(
-        value: v,
-        child: Text("₹ $v"),
-      ))
+          .map((v) => DropdownMenuItem<int>(value: v, child: Text("₹ $v")))
           .toList(),
       onChanged: (v) {
         if (v != null) _amountController.text = v.toString();
@@ -1478,38 +1301,39 @@ class _CustomerFormScreenState extends State<CustomerForm> {
   }
 
   // 🔹 Group Date Dropdown (only 10 & 20 rule)
- Widget _buildGroupDateDropdown() {
-  DateTime now = DateTime.now();
-  int day = now.day;
+  Widget _buildGroupDateDropdown() {
+    DateTime now = DateTime.now();
+    int day = now.day;
 
-  DateTime option1;
-  DateTime option2;
+    DateTime option1;
+    DateTime option2;
 
-  if (day >= 11) {
-    option1 = DateTime(now.year, now.month, 20);
-    option2 = DateTime(now.year, now.month + 1, 10);
-  } else {
-    option1 = DateTime(now.year, now.month, 10);
-    option2 = DateTime(now.year, now.month, 20);
-  }
-
-  final List<DateTime> options = [option1, option2];
-
-  // Parse controller value safely (if any)
-  DateTime? selectedDate;
-  if (_dateController.text.isNotEmpty) {
-    try {
-      selectedDate = DateTime.parse(_dateController.text); // backend format
-    } catch (e) {
-      selectedDate = null;
+    if (day >= 11) {
+      option1 = DateTime(now.year, now.month, 20);
+      option2 = DateTime(now.year, now.month + 1, 10);
+    } else {
+      option1 = DateTime(now.year, now.month, 10);
+      option2 = DateTime(now.year, now.month, 20);
     }
-  }
 
-  return _buildDropdownField<DateTime>(
-    label: "Group Date",
-    value: selectedDate,
-    items: options
-        .map((date) => DropdownMenuItem<DateTime>(
+    final List<DateTime> options = [option1, option2];
+
+    // Parse controller value safely (if any)
+    DateTime? selectedDate;
+    if (_dateController.text.isNotEmpty) {
+      try {
+        selectedDate = DateTime.parse(_dateController.text); // backend format
+      } catch (e) {
+        selectedDate = null;
+      }
+    }
+
+    return _buildDropdownField<DateTime>(
+      label: "Group Date",
+      value: selectedDate,
+      items: options
+          .map(
+            (date) => DropdownMenuItem<DateTime>(
               value: date,
               child: Text(
                 // Show as dd-MM-yyyy for user
@@ -1517,25 +1341,25 @@ class _CustomerFormScreenState extends State<CustomerForm> {
                 "${date.month.toString().padLeft(2, '0')}-"
                 "${date.year}",
               ),
-            ))
-        .toList(),
-    onChanged: (v) {
-      if (v != null) {
-        // Save in yyyy-MM-dd for backend
-        _dateController.text =
-            "${v.year}-${v.month.toString().padLeft(2, '0')}-${v.day.toString().padLeft(2, '0')}";
+            ),
+          )
+          .toList(),
+      onChanged: (v) {
+        if (v != null) {
+          // Save in yyyy-MM-dd for backend
+          _dateController.text =
+              "${v.year}-${v.month.toString().padLeft(2, '0')}-${v.day.toString().padLeft(2, '0')}";
 
-        // (Optional) print what user sees
-        print(
-            "Selected for display: ${v.day.toString().padLeft(2, '0')}-${v.month.toString().padLeft(2, '0')}-${v.year}");
-        print("Saved for backend: ${_dateController.text}");
-      }
-    },
-    isRequired: true,
-  );
-}
-
-
+          // (Optional) print what user sees
+          print(
+            "Selected for display: ${v.day.toString().padLeft(2, '0')}-${v.month.toString().padLeft(2, '0')}-${v.year}",
+          );
+          print("Saved for backend: ${_dateController.text}");
+        }
+      },
+      isRequired: true,
+    );
+  }
 
   Widget _buildNavigationButtons() {
     return Row(
@@ -1563,10 +1387,9 @@ class _CustomerFormScreenState extends State<CustomerForm> {
           const SizedBox(width: 16),
         ],
         ElevatedButton(
-          onPressed:
-              _isSubmitting
-                  ? null
-                  : (currentStep == 4 ? _submitForm : _nextStep),
+          onPressed: _isSubmitting
+              ? null
+              : (currentStep == 3 ? _submitForm : _nextStep), // Updated to step 3
           style: ElevatedButton.styleFrom(
             backgroundColor: kPrimaryColor,
             shape: RoundedRectangleBorder(
@@ -1574,38 +1397,37 @@ class _CustomerFormScreenState extends State<CustomerForm> {
             ),
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
           ),
-          child:
-              _isSubmitting
-                  ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
+          child: _isSubmitting
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
                       ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Submitting...',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
-                  )
-                  : Text(
-                    currentStep == 4 ? 'Submit' : 'Next',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
                     ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Submitting...',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                )
+              : Text(
+                  currentStep == 3 ? 'Submit' : 'Next', // Updated to step 3
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
                   ),
+                ),
         ),
       ],
     );
@@ -1618,17 +1440,10 @@ class _CustomerFormScreenState extends State<CustomerForm> {
     _lastNameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
-    _aadhaarController.dispose();
-    _panController.dispose();
+    _nomineeController.dispose();
+    _nomineeNumberController.dispose();
 
-    // Step 2 controllers
-    _holderNameController.dispose();
-    _bankAccountController.dispose();
-    _ifscController.dispose();
-    _branchNameController.dispose();
-    _branchCodeController.dispose();
-
-    // Step 3 controllers
+    // Step 2 controllers (Address details)
     _cityController.dispose();
     _stateController.dispose();
     _addressController.dispose();
@@ -1651,8 +1466,8 @@ class UpperCaseTextInputFormatter extends TextInputFormatter {
     return TextEditingValue(
       text: newValue.text.toUpperCase(),
       selection: newValue.selection,
-);
-}
+    );
+  }
 }
 
 const kPrimaryColor = Color(0xFFc49253);

@@ -1,6 +1,8 @@
 import 'package:agents/agent.dart';
+import 'package:agents/api.dart';
 import 'package:agents/forgotpassword.dart';
 import 'package:agents/main.dart';
+import 'package:agents/subagnet.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -71,14 +73,21 @@ class Transaction {
 
 // Enhanced API Service with logout
 class WalletService {
-  final String baseUrl = 'http://localhost:2025/api/users/wallet';
-
   Future<WalletData> fetchWalletData(String userId) async {
     try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token'); // Retrieve stored token
+
       final response = await http.get(
-        Uri.parse('$baseUrl/$userId'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse('${ApiConfig.api}/users/wallet/$userId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',  // Add Bearer Token here
+        },
       );
+
+      print('Response Status: ${response.statusCode}');
+      print('Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         return WalletData.fromJson(json.decode(response.body));
@@ -96,9 +105,10 @@ class WalletService {
     await prefs.remove('auth_token');
     await prefs.remove('user_data');
     await prefs.remove('login_time');
-    await prefs.clear(); // Clear all stored data
+    await prefs.clear();
   }
 }
+
 
 // Enhanced Wallet Page
 class WalletPage extends StatefulWidget {
@@ -110,13 +120,12 @@ class WalletPage extends StatefulWidget {
   State<WalletPage> createState() => _WalletPageState();
 }
 
-class _WalletPageState extends State<WalletPage>
-    with TickerProviderStateMixin {
+class _WalletPageState extends State<WalletPage> with TickerProviderStateMixin {
   final WalletService _walletService = WalletService();
   WalletData? _walletData;
   bool _isLoading = false;
   String? _error;
-  
+
   late AnimationController _animationController;
   late AnimationController _pulseController;
   late Animation<double> _fadeAnimation;
@@ -126,42 +135,30 @@ class _WalletPageState extends State<WalletPage>
   @override
   void initState() {
     super.initState();
-    
+
     // Initialize animations
     _animationController = AnimationController(
       duration: Duration(milliseconds: 800),
       vsync: this,
     );
-    
+
     _pulseController = AnimationController(
       duration: Duration(seconds: 2),
       vsync: this,
     )..repeat(reverse: true);
-    
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
-    
-    _slideAnimation = Tween<double>(
-      begin: 50.0,
-      end: 0.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
-    
-    _pulseAnimation = Tween<double>(
-      begin: 0.8,
-      end: 1.2,
-    ).animate(CurvedAnimation(
-      parent: _pulseController,
-      curve: Curves.easeInOut,
-    ));
-    
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+
+    _slideAnimation = Tween<double>(begin: 50.0, end: 0.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
+    );
+
+    _pulseAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
     _fetchWalletData();
   }
 
@@ -201,7 +198,7 @@ class _WalletPageState extends State<WalletPage>
   // Manual refresh method for tap-to-refresh
   Future<void> _manualRefresh() async {
     await _onRefresh();
-    
+
     // Show a brief success message
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -215,9 +212,7 @@ class _WalletPageState extends State<WalletPage>
         backgroundColor: Color(0xFF4CAF50),
         duration: Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
@@ -237,10 +232,7 @@ class _WalletPageState extends State<WalletPage>
             children: [
               Icon(Icons.logout, color: Color(0xFFE91E63)),
               SizedBox(width: 12),
-              Text(
-                'Logout',
-                style: TextStyle(color: Colors.white),
-              ),
+              Text('Logout', style: TextStyle(color: Colors.white)),
             ],
           ),
           content: Text(
@@ -249,10 +241,7 @@ class _WalletPageState extends State<WalletPage>
           ),
           actions: <Widget>[
             TextButton(
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: Colors.white70),
-              ),
+              child: Text('Cancel', style: TextStyle(color: Colors.white70)),
               onPressed: () {
                 Navigator.of(context).pop();
               },
@@ -285,70 +274,67 @@ class _WalletPageState extends State<WalletPage>
   }
 
   // Perform logout operation
-// Perform logout operation
-Future<void> _performLogout() async {
-  // Show loading indicator
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (BuildContext context) {
-      return Center(
-        child: Container(
-          padding: EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Color(0xFF1D1E33),
-            borderRadius: BorderRadius.circular(12),
+  // Perform logout operation
+  Future<void> _performLogout() async {
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Center(
+          child: Container(
+            padding: EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Color(0xFF1D1E33),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF667eea)),
+                ),
+                SizedBox(height: 16),
+                Text('Logging out...', style: TextStyle(color: Colors.white)),
+              ],
+            ),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF667eea)),
-              ),
-              SizedBox(height: 16),
-              Text(
-                'Logging out...',
-                style: TextStyle(color: Colors.white),
-              ),
-            ],
-          ),
+        );
+      },
+    );
+
+    try {
+      // 🔹 Clear stored data
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear(); // removes all keys (auth_token, user_id, etc.)
+      // or if you only want to remove specific keys:
+      // await prefs.remove('auth_token');
+      // await prefs.remove('user_data');
+      // await prefs.remove('user_id');
+      // await prefs.remove('login_time');
+
+      // 🔹 Close loading dialog
+      Navigator.of(context).pop();
+
+      // 🔹 Navigate to Login Page (replace with your LoginScreen)
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => LoginScreen()),
+        (Route<dynamic> route) => false, // removes all previous routes
+      );
+    } catch (e) {
+      // Close loading dialog
+      Navigator.of(context).pop();
+
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Logout failed. Please try again.'),
+          backgroundColor: Colors.redAccent,
         ),
       );
-    },
-  );
-
-  try {
-    // 🔹 Clear stored data
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear(); // removes all keys (auth_token, user_id, etc.)
-    // or if you only want to remove specific keys:
-    // await prefs.remove('auth_token');
-    // await prefs.remove('user_data');
-    // await prefs.remove('user_id');
-    // await prefs.remove('login_time');
-
-    // 🔹 Close loading dialog
-    Navigator.of(context).pop();
-
-    // 🔹 Navigate to Login Page (replace with your LoginScreen)
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => LoginScreen()),
-      (Route<dynamic> route) => false, // removes all previous routes
-    );
-  } catch (e) {
-    // Close loading dialog
-    Navigator.of(context).pop();
-
-    // Show error message
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Logout failed. Please try again.'),
-        backgroundColor: Colors.redAccent,
-      ),
-    );
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -371,16 +357,12 @@ Future<void> _performLogout() async {
                 background: Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [
-                        Color(0xFF667eea),
-                        Color(0xFF764ba2),
-                      ],
+                      colors: [Color(0xFF667eea), Color(0xFF764ba2)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                   ),
                 ),
-               
               ),
               actions: [
                 // Refresh Button
@@ -391,16 +373,13 @@ Future<void> _performLogout() async {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: IconButton(
-                    icon: _isLoading 
+                    icon: _isLoading
                         ? AnimatedBuilder(
                             animation: _pulseController,
                             builder: (context, child) {
                               return Transform.scale(
                                 scale: _pulseAnimation.value,
-                                child: Icon(
-                                  Icons.refresh,
-                                  color: Colors.white,
-                                ),
+                                child: Icon(Icons.refresh, color: Colors.white),
                               );
                             },
                           )
@@ -424,11 +403,9 @@ Future<void> _performLogout() async {
                 ),
               ],
             ),
-            
+
             // Main Content
-            SliverToBoxAdapter(
-              child: _buildBody(),
-            ),
+            SliverToBoxAdapter(child: _buildBody()),
           ],
         ),
       ),
@@ -464,10 +441,7 @@ Future<void> _performLogout() async {
               SizedBox(height: 24),
               Text(
                 'Loading your wallet...',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 16,
-                ),
+                style: TextStyle(color: Colors.white70, fontSize: 16),
               ),
             ],
           ),
@@ -564,15 +538,15 @@ Future<void> _performLogout() async {
                   // Balance Card
                   _buildBalanceCard(),
                   SizedBox(height: 20),
-                  
+
                   // User Info Card
                   _buildUserInfoCard(),
                   SizedBox(height: 20),
-                  
+
                   // Quick Actions
                   _buildQuickActions(),
                   SizedBox(height: 20),
-                  
+
                   // Transaction History Header
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -598,27 +572,27 @@ Future<void> _performLogout() async {
                     ],
                   ),
                   SizedBox(height: 12),
-                  
+
                   // Transaction List
                   _buildTransactionList(),
-                  
+
                   SizedBox(height: 20),
                   Center(
                     child: Column(
                       children: [
                         Text(
                           'Pull down to refresh ✨',
-                          style: TextStyle(
-                            color: Colors.white38,
-                            fontSize: 14,
-                          ),
+                          style: TextStyle(color: Colors.white38, fontSize: 14),
                         ),
                         SizedBox(height: 8),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Container(
-                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
                                 color: Color(0xFF1D1E33),
                                 borderRadius: BorderRadius.circular(15),
@@ -671,10 +645,7 @@ Future<void> _performLogout() async {
       padding: EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            Color(0xFF667eea),
-            Color(0xFF764ba2),
-          ],
+          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -695,10 +666,7 @@ Future<void> _performLogout() async {
             children: [
               Text(
                 'Total Balance',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 16,
-                ),
+                style: TextStyle(color: Colors.white70, fontSize: 16),
               ),
               Container(
                 padding: EdgeInsets.all(8),
@@ -726,11 +694,7 @@ Future<void> _performLogout() async {
           SizedBox(height: 8),
           Row(
             children: [
-              Icon(
-                Icons.trending_up,
-                color: Colors.greenAccent,
-                size: 16,
-              ),
+              Icon(Icons.trending_up, color: Colors.greenAccent, size: 16),
               SizedBox(width: 4),
               Text(
                 '+2.5% from last month',
@@ -753,10 +717,7 @@ Future<void> _performLogout() async {
       decoration: BoxDecoration(
         color: Color(0xFF1D1E33),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.1),
-          width: 1,
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
       ),
       child: Row(
         children: [
@@ -769,11 +730,7 @@ Future<void> _performLogout() async {
               ),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              Icons.person,
-              color: Colors.white,
-              size: 28,
-            ),
+            child: Icon(Icons.person, color: Colors.white, size: 28),
           ),
           SizedBox(width: 16),
           Expanded(
@@ -805,7 +762,6 @@ Future<void> _performLogout() async {
                   ),
                 ),
                 SizedBox(height: 4),
-              
               ],
             ),
           ),
@@ -813,10 +769,11 @@ Future<void> _performLogout() async {
       ),
     );
   }
-Future<String?> _getStoredUserRole() async {
-  final prefs = await SharedPreferences.getInstance();
-  return prefs.getString('user_role');
-}
+
+  Future<String?> _getStoredUserRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('user_role');
+  }
 
   Widget _buildQuickActions() {
     return Row(
@@ -828,9 +785,9 @@ Future<String?> _getStoredUserRole() async {
             color: Color(0xFF4CAF50),
             onTap: () {
               Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => CustomerForm()),
-            );
+                context,
+                MaterialPageRoute(builder: (context) => CustomerForm()),
+              );
             },
           ),
         ),
@@ -845,36 +802,37 @@ Future<String?> _getStoredUserRole() async {
         ),
         SizedBox(width: 12),
         Expanded(
-          child:_buildActionButton(
-  icon: Icons.person,
-  label: 'Add Agent/SubAgent',
-  color: Color(0xFFFF9800),
-  onTap: () async {
-    final role = await _getStoredUserRole();
+          child: _buildActionButton(
+            icon: Icons.person,
+            label: 'Add Agent',
+            color: Color(0xFFFF9800),
+            onTap: () async {
+              final role = await _getStoredUserRole();
 
-    if (role == 'SHAREHOLDER') {
-      // ✅ Shareholder can add Agent
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => ShareHolderForm()),
-      );
-    } else if (role == 'AGENT') {
-      // ✅ Agent can add SubAgent
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => ShareHolderForm()),
-      );
-    } else {
-      // ❌ Others cannot
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('❌ Access denied: Only SHAREHOLDER can add Agents, and AGENT can add SubAgents'),
-        ),
-      );
-    }
-  },
-),
-
+              if (role == 'SHAREHOLDER') {
+                // ✅ Shareholder can add Agent
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ShareHolderForm()),
+                );
+              } else if (role == 'AGENT') {
+                // ✅ Agent can add SubAgent
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => subagent()),
+                );
+              } else {
+                // ❌ Others cannot
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      '❌ Access denied',
+                    ),
+                  ),
+                );
+              }
+            },
+          ),
         ),
       ],
     );
@@ -893,10 +851,7 @@ Future<String?> _getStoredUserRole() async {
         decoration: BoxDecoration(
           color: Color(0xFF1D1E33),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: color.withOpacity(0.3),
-            width: 1,
-          ),
+          border: Border.all(color: color.withOpacity(0.3), width: 1),
         ),
         child: Column(
           children: [
@@ -906,11 +861,7 @@ Future<String?> _getStoredUserRole() async {
                 color: color.withOpacity(0.2),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 20,
-              ),
+              child: Icon(icon, color: color, size: 20),
             ),
             SizedBox(height: 8),
             Text(
@@ -937,18 +888,11 @@ Future<String?> _getStoredUserRole() async {
         ),
         child: Column(
           children: [
-            Icon(
-              Icons.receipt_long,
-              color: Colors.white38,
-              size: 48,
-            ),
+            Icon(Icons.receipt_long, color: Colors.white38, size: 48),
             SizedBox(height: 16),
             Text(
               'No transactions yet',
-              style: TextStyle(
-                color: Colors.white60,
-                fontSize: 16,
-              ),
+              style: TextStyle(color: Colors.white60, fontSize: 16),
             ),
           ],
         ),
@@ -966,17 +910,14 @@ Future<String?> _getStoredUserRole() async {
 
   Widget _buildTransactionItem(Transaction transaction, int index) {
     final isCredit = transaction.amount > 0;
-    
+
     return Container(
       margin: EdgeInsets.only(bottom: 12),
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Color(0xFF1D1E33),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.05),
-          width: 1,
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.05), width: 1),
       ),
       child: Row(
         children: [
@@ -984,7 +925,7 @@ Future<String?> _getStoredUserRole() async {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: isCredit 
+              color: isCredit
                   ? Color(0xFF4CAF50).withOpacity(0.2)
                   : Color(0xFFE91E63).withOpacity(0.2),
               shape: BoxShape.circle,
@@ -1000,14 +941,10 @@ Future<String?> _getStoredUserRole() async {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-              
                 SizedBox(height: 4),
                 Text(
                   '${transaction.createdAt.day}/${transaction.createdAt.month}/${transaction.createdAt.year} • ${transaction.createdAt.hour}:${transaction.createdAt.minute.toString().padLeft(2, '0')}',
-                  style: TextStyle(
-                    color: Colors.white54,
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.white54, fontSize: 12),
                 ),
               ],
             ),
@@ -1032,10 +969,7 @@ Future<String?> _getStoredUserRole() async {
                 ),
                 child: Text(
                   isCredit ? 'Credit' : 'Debit',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 10,
-                  ),
+                  style: TextStyle(color: Colors.white70, fontSize: 10),
                 ),
               ),
             ],
